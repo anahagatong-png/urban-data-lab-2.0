@@ -1,0 +1,8 @@
+{
+  "name": "Urban Data Lab",
+  "description": "Análise preliminar de viabilidade urbanística em Portugal com raciocínio geoespacial, condicionantes municipais (PDM) e estimativa de rentabilidade.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
