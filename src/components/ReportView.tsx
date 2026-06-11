@@ -13,11 +13,13 @@ interface ReportViewProps {
 }
 
 export default function ReportView({ project, results }: ReportViewProps) {
+  const isAgricultural = project.projectType === "agricultural";
+
   // Compute chart segments for the budget breakdown
   const segments = [
-    { name: "Custo do Terreno", value: project.landCost, color: "#f59e0b" },
-    { name: "Construção (Obras)", value: results.buildCostGlobal, color: "#6366f1" },
-    { name: "Estacionamento Subterrâneo", value: results.basementParkingCost, color: "#3b82f6" },
+    { name: "Custo do Terreno (Rústico)", value: project.landCost, color: "#f59e0b" },
+    { name: isAgricultural ? "Construção do Armazém" : "Construção (Obras)", value: results.buildCostGlobal, color: "#6366f1" },
+    { name: isAgricultural ? "Arruamentos & Valetas" : "Estacionamento Subterrâneo", value: isAgricultural ? results.buildCostGlobal * 0.05 : results.basementParkingCost, color: "#3b82f6" },
     { name: "Licenças & Projetos", value: results.projectFeesCost, color: "#ec4899" },
     { name: "Custos Financeiros", value: results.financingCost, color: "#10b981" },
   ];
@@ -39,8 +41,8 @@ export default function ReportView({ project, results }: ReportViewProps) {
       <div className="lg:col-span-2 space-y-6">
         <div className="bg-slate-900 rounded-3xl p-6 border border-slate-800/80 shadow-xl">
           <h3 className="font-display font-semibold text-slate-200 text-sm uppercase tracking-wider mb-4 flex items-center gap-2">
-            <Building className="h-5 w-5 text-indigo-400" />
-            Verificação de Conformidade PDM / RGEU
+            <Building className="h-5 w-5 text-emerald-400" />
+            {isAgricultural ? "Conformidade Rural (Apoio Agrícola / PDM / RAN / REN)" : "Verificação de Conformidade PDM / RGEU"}
           </h3>
 
           <div className="overflow-x-auto">
@@ -55,101 +57,201 @@ export default function ReportView({ project, results }: ReportViewProps) {
               </thead>
               <tbody className="divide-y divide-slate-800/60">
                 
-                {/* Floor Area Ratio Check (COS) */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Área Bruta de Construção (ABC)</div>
-                    <span className="text-[11px] font-light text-slate-500">Coeficiente de Ocupação (COS): {project.customCOS}</span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(results.maxGrossArea)}</td>
-                  <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxGrossArea)}</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Conforme
-                    </span>
-                  </td>
-                </tr>
+                {isAgricultural ? (
+                  <>
+                    {/* Agricultural Min Scale Check */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Área Mínima do Prédio Rústico</div>
+                        <span className="text-[11px] font-light text-slate-500">Unidade de Cultura regulada p/ RAN</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">&gt;= 5.000 m²</td>
+                      <td className="px-4 py-3.5 font-mono text-emerald-400 font-bold">{formatArea(project.plotArea)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        {project.plotArea >= 5000 ? (
+                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Apropriado
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <AlertTriangle className="h-3.5 w-3.5" /> Atenção (RAN)
+                          </span>
+                        )}
+                      </td>
+                    </tr>
 
-                {/* Ground Coverage Check (CES) */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Área de Implantação máxima</div>
-                    <span className="text-[11px] font-light text-slate-500">Coeficiente de Implantação (CES): {project.customCES}</span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(project.plotArea * project.customCES)}</td>
-                  <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxFootprint)}</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Conforme
-                    </span>
-                  </td>
-                </tr>
+                    {/* Agricultural Warehouse Footprint Cap */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Implantação do Apoio Agrícola</div>
+                        <span className="text-[11px] font-light text-slate-500">Teto máximo para armazéns agrícolas rústicos</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">&lt;= 300 m²</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxFootprint)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        {results.maxFootprint <= 300 ? (
+                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Conforme
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <AlertTriangle className="h-3.5 w-3.5" /> Excede Apoio Simples
+                          </span>
+                        )}
+                      </td>
+                    </tr>
 
-                {/* Natural Permeability Check */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Espaço Livre Permeável Mínimo</div>
-                    <span className="text-[11px] font-light text-slate-500">Permeabilidade mínima exigida: {(project.customPermeability * 100).toFixed(0)}%</span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(results.requiredNaturalArea)}</td>
-                  <td className="px-4 py-3.5 font-mono text-emerald-400 font-bold">{formatArea(project.plotArea * (1 - project.customCES))}</td>
-                  <td className="px-4 py-3.5 text-right">
-                    {project.customCES + project.customPermeability > 1 ? (
-                      <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-400 border border-amber-550/20 text-xs px-2.5 py-1 rounded-xl font-medium animate-pulse">
-                        <AlertTriangle className="h-3.5 w-3.5" /> Crítico
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                        <ShieldCheck className="h-3.5 w-3.5" /> Respeitado
-                      </span>
-                    )}
-                  </td>
-                </tr>
+                    {/* Agricultural Height limitation */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Altura / Número de Pisos</div>
+                        <span className="text-[11px] font-light text-slate-500">Cércea téctica rural sem habitação</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">1 Piso (S/ Cave)</td>
+                      <td className="px-4 py-3.5 font-mono text-emerald-400 font-bold">1 Piso (H=4.2m)</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conforme
+                        </span>
+                      </td>
+                    </tr>
 
-                {/* Floors Count Check */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Altura da Edificação (Gabarito)</div>
-                    <span className="text-[11px] font-light text-slate-500">Número máximo de pisos regulado</span>
-                  </td>
-                  <td className="px-4 py-3.5 font-mono text-slate-400">{project.customMaxFloors} Pisos</td>
-                  <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{results.calculatedFloors} Pisos</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                      <ShieldCheck className="h-3.5 w-3.5" /> Conforme
-                    </span>
-                  </td>
-                </tr>
+                    {/* Simplex DL 10/2024 license exemption check */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Enquadramento de Isenção (Simplex)</div>
+                        <span className="text-[11px] font-light text-slate-500">DL 10/2024 para abrigos em madeira / ligeiros</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">&lt;= 30 m²</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxFootprint)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        {results.maxFootprint <= 30 ? (
+                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Isento de Licença
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            Licenciamento Coletivo
+                          </span>
+                        )}
+                      </td>
+                    </tr>
 
-                {/* Fractions estimate */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Estimativa de Frações Autónomas</div>
-                    <span className="text-[11px] font-light text-slate-500">Com base na área privativa média de {project.avgUnitSize}m²</span>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-600 font-mono">—</td>
-                  <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{results.estimatedFractions} Frações</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="inline-flex items-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                      Estimativa
-                    </span>
-                  </td>
-                </tr>
+                    {/* Parking basement check */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Estacionamento Subterrâneo</div>
+                        <span className="text-[11px] font-light text-slate-500">RGEU para edificações secundárias de suporte</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">Isento</td>
+                      <td className="px-4 py-3.5 font-mono text-slate-300">0 Lugares Cave</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          Isento
+                        </span>
+                      </td>
+                    </tr>
+                  </>
+                ) : (
+                  <>
+                    {/* Floor Area Ratio Check (COS) */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Área Bruta de Construção (ABC)</div>
+                        <span className="text-[11px] font-light text-slate-500">Coeficiente de Ocupação (COS): {project.customCOS}</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(results.maxGrossArea)}</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxGrossArea)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conforme
+                        </span>
+                      </td>
+                    </tr>
 
-                {/* Parking requirement details */}
-                <tr className="hover:bg-slate-850/35 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-slate-200">
-                    <div>Lugares de Estacionamento</div>
-                    <span className="text-[11px] font-light text-slate-500">Estimativa regulamentar em cave subterrânea</span>
-                  </td>
-                  <td className="px-4 py-3.5 text-slate-600 font-mono">—</td>
-                  <td className="px-4 py-3.5 font-mono text-slate-300">{results.requiredParkingPlaces} lugares</td>
-                  <td className="px-4 py-3.5 text-right">
-                    <span className="inline-flex items-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
-                      Obrigatório
-                    </span>
-                  </td>
-                </tr>
+                    {/* Ground Coverage Check (CES) */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Área de Implantação máxima</div>
+                        <span className="text-[11px] font-light text-slate-500">Coeficiente de Implantação (CES): {project.customCES}</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(project.plotArea * project.customCES)}</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{formatArea(results.maxFootprint)}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conforme
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Natural Permeability Check */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Espaço Livre Permeável Mínimo</div>
+                        <span className="text-[11px] font-light text-slate-500">Permeabilidade mínima exigida: {(project.customPermeability * 100).toFixed(0)}%</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">{formatArea(results.requiredNaturalArea)}</td>
+                      <td className="px-4 py-3.5 font-mono text-emerald-400 font-bold">{formatArea(project.plotArea * (1 - project.customCES))}</td>
+                      <td className="px-4 py-3.5 text-right">
+                        {project.customCES + project.customPermeability > 1 ? (
+                          <span className="inline-flex items-center gap-1 bg-amber-500/15 text-amber-400 border border-amber-550/20 text-xs px-2.5 py-1 rounded-xl font-medium animate-pulse">
+                            <AlertTriangle className="h-3.5 w-3.5" /> Crítico
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                            <ShieldCheck className="h-3.5 w-3.5" /> Respeitado
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+
+                    {/* Floors Count Check */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Altura da Edificação (Gabarito)</div>
+                        <span className="text-[11px] font-light text-slate-500">Número máximo de pisos regulado</span>
+                      </td>
+                      <td className="px-4 py-3.5 font-mono text-slate-400">{project.customMaxFloors} Pisos</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{results.calculatedFloors} Pisos</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center gap-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          <ShieldCheck className="h-3.5 w-3.5" /> Conforme
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Fractions estimate */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Estimativa de Frações Autónomas</div>
+                        <span className="text-[11px] font-light text-slate-500">Com base na área privativa média de {project.avgUnitSize}m²</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 font-mono">—</td>
+                      <td className="px-4 py-3.5 font-mono text-indigo-400 font-bold">{results.estimatedFractions} Frações</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          Estimativa
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Parking requirement details */}
+                    <tr className="hover:bg-slate-850/35 transition-colors">
+                      <td className="px-4 py-3.5 font-medium text-slate-200">
+                        <div>Lugares de Estacionamento</div>
+                        <span className="text-[11px] font-light text-slate-500">Estimativa regulamentar em cave subterrânea</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-slate-600 font-mono">—</td>
+                      <td className="px-4 py-3.5 font-mono text-slate-300">{results.requiredParkingPlaces} lugares</td>
+                      <td className="px-4 py-3.5 text-right">
+                        <span className="inline-flex items-center bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-xs px-2.5 py-1 rounded-xl font-medium">
+                          Obrigatório
+                        </span>
+                      </td>
+                    </tr>
+                  </>
+                )}
+                
               </tbody>
             </table>
           </div>
@@ -164,18 +266,18 @@ export default function ReportView({ project, results }: ReportViewProps) {
               <h4 className="font-display font-semibold text-xl text-slate-200 mt-1">{formatCurrency(results.totalInvestment)}</h4>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-800/70 flex justify-between items-center text-xs">
-              <span className="text-slate-450 font-light">Custo de Venda Break-Even</span>
+              <span className="text-slate-450 font-light">{isAgricultural ? "Breakeven do Armazém" : "Custo de Venda Break-Even"}</span>
               <span className="font-mono font-medium text-slate-300">{formatCurrency(results.breakEvenPrice)}/m²</span>
             </div>
           </div>
 
           <div className="bg-slate-900 rounded-3xl p-5 border border-slate-800/80 shadow-lg flex flex-col justify-between">
             <div>
-              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 block mb-1">VGV Potencial (Vendas)</span>
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 block mb-1">{isAgricultural ? "Valorização do Prédio" : "VGV Potencial (Vendas)"}</span>
               <h4 className="font-display font-semibold text-xl text-indigo-400 mt-1">{formatCurrency(results.estimatedVGV)}</h4>
             </div>
             <div className="mt-4 pt-3 border-t border-slate-800/70 flex justify-between items-center text-xs">
-              <span className="text-slate-450 font-light">Área Útil de Venda:</span>
+              <span className="text-slate-450 font-light">{isAgricultural ? "Área de Armazenamento:" : "Área Útil de Venda:"}</span>
               <span className="font-mono font-medium text-slate-300">{formatArea(results.sellingArea)}</span>
             </div>
           </div>

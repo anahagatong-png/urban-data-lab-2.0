@@ -59,6 +59,7 @@ Faça uma análise de viabilidade urbanística preliminar em Portugal com base n
 
 CONTEÚDO DO PROJETO:
 - Nome do Projeto: ${project.name}
+- Tipo de Projeto: ${project.projectType || "residential"} (Nota: se for 'agricultural', trata-se de um Apoio Agrícola / armazém rústico sob regras de exploração agrícola de solo rústico em Portugal)
 - Localização/Município: ${project.municipalityId}
 - Área do Terreno: ${project.plotArea} m²
 - Custo de Aquisição do Terreno: ${project.landCost} €
@@ -180,6 +181,137 @@ Certifique-se de que a resposta seja exclusivamente em JSON estruturado de acord
     console.error("Gemini Feasibility Report Generator Error:", error);
     res.status(500).json({
       error: error.message || "Erro interno ao processar a análise com Inteligência Artificial."
+    });
+  }
+});
+
+// 3. API: GeoAnalystBench Spatial Reasoning Benchmark Solver
+app.post("/api/gemini/geo-analyst-bench", async (req: express.Request, res: express.Response) => {
+  try {
+    const { taskId, question, expectedAnswer, extraContext } = req.body;
+
+    if (!taskId || !question) {
+      res.status(400).json({ error: "Parâmetros do benchmark insuficientes." });
+      return;
+    }
+
+    const ai = getGenAI();
+
+    const systemInstruction = `
+Você é um motor de Inteligência Artificial de elite testado no referencial GeoAnalystBench para validação de capacidades SIG (Sistemas de Informação Geográfica), cálculos espaciais e competência eclesiástica/jurídica de solos em Portugal.
+Analise a questão SIG indicada de forma extremamente matemática e precisa. Responda num objeto JSON estrito com o formato abaixo:
+{
+  "modelAnswer": "Sua resposta final curta e incisiva à questão.",
+  "reasoningSteps": "Explicação detalhada passo a passo e lógica dedutiva matemática/geofencing.",
+  "spatialFormulas": "Principais funções espaciais PostGIS ou fórmulas geométricas de referência mundial aplicáveis (ex: ST_Contains, ST_Distance, ST_Transform, etc.)",
+  "portugueseStandard": "Referúncia legal portuguesa ou convenção de Engenharia Geográfica correspondente."
+}
+
+Seja extremamente objetivo. Retorne apenas o JSON. Idioma: Português de Portugal.
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `
+QUESTÃO SIG DA BATERIA GEOANALYSTBENCH:
+---
+${question}
+---
+${extraContext ? `CONTEXTO ADICIONAL DO PROJETO:\n${extraContext}\n` : ""}
+Responda de forma rigorosa, analisando a precisão geográfica e resolvendo matematicamente.
+`,
+      config: {
+        systemInstruction,
+        temperature: 0.2,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          required: ["modelAnswer", "reasoningSteps", "spatialFormulas", "portugueseStandard"],
+          properties: {
+            modelAnswer: { type: Type.STRING },
+            reasoningSteps: { type: Type.STRING },
+            spatialFormulas: { type: Type.STRING },
+            portugueseStandard: { type: Type.STRING }
+          }
+        }
+      }
+    });
+
+    const bodyText = response.text || "{}";
+    res.json(JSON.parse(bodyText.trim()));
+
+  } catch (error: any) {
+    console.error("GeoAnalystBench Solver Error:", error);
+    res.status(500).json({
+      error: error.message || "Erro no processamento do GeoAnalystBench solver."
+    });
+  }
+});
+
+// 4. API: GeoBenchX Earth Observation and Remote Sensing VQA Solver
+app.post("/api/gemini/geo-bench-x", async (req: express.Request, res: express.Response) => {
+  try {
+    const { taskId, category, question, satelliteMetadata } = req.body;
+
+    if (!taskId || !question) {
+      res.status(400).json({ error: "Parâmetros do benchmark GeoBenchX insuficientes." });
+      return;
+    }
+
+    const ai = getGenAI();
+
+    const systemInstruction = `
+Você é um motor especialista em Sensoriamento Remoto, Processamento Digital de Imagem (PDI) e Observação da Terra (Earth Observation), testado no referencial GeoBenchX do repositório de IA espacial solirinai/geobenchx.
+Analise a questão e os metadados do canal de satélite (como bandas multiespectrais Sentinel-2 ou Landsat, índices NDVI/NDWI, cobertura de nuvens, DEM/declives) e forneça uma resposta extremamente qualificada técnica e cientificamente.
+
+Retorne obrigatoriamente um objeto JSON estrito com a seguinte estrutura:
+{
+  "analyzedClass": "Classificação final proposta, ex: Água, Solo Exposto, Floresta Densa, Área Urbana Consolidada, etc.",
+  "confidencePct": 92.5,
+  "spectralReview": "Explicação física fundamentada com base nos comprimentos de onda das bandas descritas (Red, NIR, SWIR, etc.) ou na morfologia da imagem.",
+  "justification": "Argumentação científica rigorosa para a resposta final à pergunta.",
+  "suggestedWorkflow": "Melhor pipeline do QGIS/SAGA ou script Python/GEE (Google Earth Engine) para mapear esta feição na prática."
+}
+
+Mantenha a resposta concisa, científica, exata e estritamente no formato json. Idioma: Português de Portugal.
+`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: `
+TAREFA GEOBENCHX - SENSORIAMENTO REMOTO & CLASSIFICAÇÃO:
+---
+Categoria: ${category}
+Questão: ${question}
+Metadados de Satélite Fornecidos: ${JSON.stringify(satelliteMetadata || {})}
+---
+Resolva e classifique com base na teoria de transferência radiativa de alvos e assinaturas espectrais de solo/vegetação/relevo.
+`,
+      config: {
+        systemInstruction,
+        temperature: 0.15,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          required: ["analyzedClass", "confidencePct", "spectralReview", "justification", "suggestedWorkflow"],
+          properties: {
+            analyzedClass: { type: Type.STRING },
+            confidencePct: { type: Type.NUMBER },
+            spectralReview: { type: Type.STRING },
+            justification: { type: Type.STRING },
+            suggestedWorkflow: { type: Type.STRING }
+          }
+        }
+      }
+    });
+
+    const bodyText = response.text || "{}";
+    res.json(JSON.parse(bodyText.trim()));
+
+  } catch (error: any) {
+    console.error("GeoBenchX Solver Error:", error);
+    res.status(500).json({
+      error: error.message || "Erro no processamento do GeoBenchX solver."
     });
   }
 });

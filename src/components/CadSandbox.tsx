@@ -12,6 +12,7 @@ interface CadSandboxProps {
   maxFloors: number;
   calculatedFloors: number;
   permeability: number;
+  projectType?: "residential" | "agricultural";
 }
 
 export default function CadSandbox({
@@ -20,6 +21,7 @@ export default function CadSandbox({
   maxFloors,
   calculatedFloors,
   permeability,
+  projectType = "residential",
 }: CadSandboxProps) {
   const [aspectRatio, setAspectRatio] = useState<number>(1.2); // width / depth
   const [frontOffset, setFrontOffset] = useState<number>(6); // meters
@@ -264,11 +266,31 @@ export default function CadSandbox({
                   y={originY + buildOffsetY * scale}
                   width={finalBuildWidth * scale}
                   height={finalBuildDepth * scale}
-                  fill="url(#bldg-pattern)"
-                  stroke="#818cf8"
+                  fill={projectType === "agricultural" ? "#115e59" : "url(#bldg-pattern)"}
+                  stroke={projectType === "agricultural" ? "#14b8a6" : "#818cf8"}
                   strokeWidth="2"
                   rx="2"
                 />
+
+                {/* Pitch roof layout central ridge (cumeeira) for agricultural warehouse */}
+                {projectType === "agricultural" && (
+                  <g>
+                    <line
+                      x1={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2}
+                      y1={originY + buildOffsetY * scale}
+                      x2={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2}
+                      y2={originY + (buildOffsetY + finalBuildDepth) * scale}
+                      stroke="#2dd4bf"
+                      strokeWidth="1.5"
+                      strokeDasharray="2 2"
+                    />
+                    {/* Diagonal valley/hip lines */}
+                    <line x1={originX + buildOffsetX * scale} y1={originY + buildOffsetY * scale} x2={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2} y2={originY + buildOffsetY * scale} stroke="#2dd4bf" strokeWidth="0.8" opacity="0.6"/>
+                    <line x1={originX + (buildOffsetX + finalBuildWidth) * scale} y1={originY + buildOffsetY * scale} x2={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2} y2={originY + buildOffsetY * scale} stroke="#2dd4bf" strokeWidth="0.8" opacity="0.6"/>
+                    <line x1={originX + buildOffsetX * scale} y1={originY + (buildOffsetY + finalBuildDepth) * scale} x2={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2} y2={originY + (buildOffsetY + finalBuildDepth) * scale} stroke="#2dd4bf" strokeWidth="0.8" opacity="0.6"/>
+                    <line x1={originX + (buildOffsetX + finalBuildWidth) * scale} y1={originY + (buildOffsetY + finalBuildDepth) * scale} x2={originX + buildOffsetX * scale + (finalBuildWidth * scale) / 2} y2={originY + (buildOffsetY + finalBuildDepth) * scale} stroke="#2dd4bf" strokeWidth="0.8" opacity="0.6"/>
+                  </g>
+                )}
 
                 {/* Footprint center text summary */}
                 <text
@@ -277,16 +299,16 @@ export default function CadSandbox({
                   textAnchor="middle"
                   fontSize="10"
                   fontWeight="600"
-                  className="fill-indigo-300 font-mono"
+                  className={projectType === "agricultural" ? "fill-teal-200 font-mono" : "fill-indigo-300 font-mono"}
                 >
-                  ABC Impl.
+                  {projectType === "agricultural" ? "Apoio Agrícola" : "ABC Impl."}
                 </text>
                 <text
                   x={originX + (buildOffsetX + finalBuildWidth / 2) * scale}
                   y={originY + (buildOffsetY + finalBuildDepth / 2) * scale + 11}
                   textAnchor="middle"
                   fontSize="9"
-                  className="fill-indigo-400 font-mono"
+                  className={projectType === "agricultural" ? "fill-teal-400 font-mono" : "fill-indigo-400 font-mono"}
                 >
                   {activeFootprintArea.toFixed(0)}m²
                 </text>
@@ -354,54 +376,124 @@ export default function CadSandbox({
                   {/* 3D Volumetric Extruded Floor Levels Stack */}
                   {finalBuildWidth > 0 && finalBuildDepth > 0 && (
                     <g className="transition-all duration-300">
-                      {Array.from({ length: Math.max(1, calculatedFloors) }).map((_, i) => {
-                        const floorHeight = 16; // Visual pixels per floor
-                        const currentY = -i * floorHeight;
+                      {projectType === "agricultural" ? (
+                        /* GORGEOUS AGRICULTURAL BARN (PORTUGUESE APOIO AGRÍCOLA) WITH PITCHED ROOF */
+                        <g>
+                          {/* Warehouse Main Body / Base Walls */}
+                          {/* Front Left Wall */}
+                          <polygon
+                            points="-70,0 0,32 0,4 -70,-28"
+                            fill="#0f766e" // Teal color accent for warehouse
+                            stroke="#14b8a6"
+                            strokeWidth="1"
+                          />
+                          {/* Front Right Wall */}
+                          <polygon
+                            points="0,32 70,0 70,-28 0,4"
+                            fill="#115e59"
+                            stroke="#14b8a6"
+                            strokeWidth="1"
+                          />
 
-                        return (
-                          <g key={i} className="transition-all duration-300">
-                            {/* FLOOR VOLUME BLOCK */}
-                            {/* Front Left Wall */}
-                            <polygon
-                              points={`-60,${currentY} 0,${currentY + 30} 0,${currentY + 30 - floorHeight} -60,${currentY - floorHeight}`}
-                              fill={i % 2 === 0 ? "#312e81" : "#1e1b4b"}
-                              stroke="#4f46e5"
-                              strokeWidth="0.8"
-                            />
-                            {/* Front Right Wall */}
-                            <polygon
-                              points={`0,${currentY + 30} 60,${currentY} 60,${currentY - floorHeight} 0,${currentY + 30 - floorHeight}`}
-                              fill={i % 2 === 0 ? "#4338ca" : "#3730a3"}
-                              stroke="#4f46e5"
-                              strokeWidth="0.8"
-                            />
-                            {/* Roof/Slab Plane */}
-                            <polygon
-                              points={`-60,${currentY - floorHeight} 0,${currentY + 30 - floorHeight} 60,${currentY - floorHeight} 0,${currentY - 30 - floorHeight}`}
-                              fill="#6366f1"
-                              stroke="#818cf8"
-                              strokeWidth="1"
-                              opacity="0.9"
-                            />
+                          {/* Large Sliding Barn Door on Front Left Wall */}
+                          <polygon
+                            points="-32,10 -8,21 -8,-10 -32,-21"
+                            fill="#1e293b"
+                            stroke="#475569"
+                            strokeWidth="1"
+                          />
+                          {/* Sliding door mechanism rails */}
+                          <line x1="-34" y1="-21" x2="-6" y2="-9" stroke="#f59e0b" strokeWidth="1.5" />
 
-                            {/* Windows Mockup Lines */}
-                            <line x1="-40" y1={currentY + 12 - floorHeight} x2="-40" y2={currentY + 18 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
-                            <line x1="-20" y1={currentY + 18 - floorHeight} x2="-20" y2={currentY + 24 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
-                            <line x1="20" y1={currentY + 18 - floorHeight} x2="20" y2={currentY + 24 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
-                            <line x1="40" y1={currentY + 12 - floorHeight} x2="40" y2={currentY + 18 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
+                          {/* Gable front wall (closing the triangular gap under the roof pitch at front) */}
+                          {/* Triangle peak is at (0, -20) */}
+                          <polygon
+                            points="-70,-28 0,-48 70,-28 0,4"
+                            fill="#134e4a" // Solid dark teal gable front
+                            stroke="#14b8a6"
+                            strokeWidth="1"
+                            opacity="0.95"
+                          />
 
-                            {/* Floor Tag text on the top floor only */}
-                            {i === calculatedFloors - 1 && (
-                              <g transform={`translate(0, ${currentY - floorHeight - 12})`}>
-                                <rect x="-24" y="-8" width="48" height="13" fill="#0f172a" rx="3" stroke="#818cf8" strokeWidth="0.8" />
-                                <text x="0" y="2" textAnchor="middle" fontSize="7" fontWeight="bold" className="fill-indigo-300 font-mono">
-                                  {calculatedFloors} PISOS
-                                </text>
-                              </g>
-                            )}
+                          {/* Pitch wood-grain / terracotta circular vent style */}
+                          <circle cx="0" cy="-21" r="5" fill="#1e293b" stroke="#f59e0b" strokeWidth="1" />
+                          <line x1="-5" y1="-21" x2="5" y2="-21" stroke="#f59e0b" strokeWidth="0.8" />
+                          <line x1="0" y1="-26" x2="0" y2="-16" stroke="#f59e0b" strokeWidth="0.8" />
+
+                          {/* Pitched Roof Planes (Telhado de Duas Águas) */}
+                          {/* Left Slope: Peak line (0,-48) to (0,-80) (back) down to (-70,-28) to (-70,-60) */}
+                          <polygon
+                            points="-70,-28 0,-48 0,-76 -70,-56"
+                            fill="#9a3412" // Deep clay orange
+                            stroke="#ea580c"
+                            strokeWidth="1.2"
+                          />
+                          {/* Right Slope: Peak line (0,-48) to (0,-80) down to (70,-28) to (70,-60) */}
+                          <polygon
+                            points="0,-48 70,-28 70,-56 0,-76"
+                            fill="#b45309" // Brighter clay orange
+                            stroke="#ea580c"
+                            strokeWidth="1.2"
+                          />
+
+                          {/* Annotation Signpost */}
+                          <g transform="translate(0, -90)">
+                            <rect x="-35" y="-8" width="70" height="13" fill="#0f172a" rx="3" stroke="#10b981" strokeWidth="0.8" />
+                            <text x="0" y="1.5" textAnchor="middle" fontSize="6.5" fontWeight="bold" className="fill-emerald-300 font-mono">
+                              MINI-ARMAZÉM
+                            </text>
                           </g>
-                        );
-                      })}
+                        </g>
+                      ) : (
+                        Array.from({ length: Math.max(1, calculatedFloors) }).map((_, i) => {
+                          const floorHeight = 16; // Visual pixels per floor
+                          const currentY = -i * floorHeight;
+
+                          return (
+                            <g key={i} className="transition-all duration-300">
+                              {/* FLOOR VOLUME BLOCK */}
+                              {/* Front Left Wall */}
+                              <polygon
+                                points={`-60,${currentY} 0,${currentY + 30} 0,${currentY + 30 - floorHeight} -60,${currentY - floorHeight}`}
+                                fill={i % 2 === 0 ? "#312e81" : "#1e1b4b"}
+                                stroke="#4f46e5"
+                                strokeWidth="0.8"
+                              />
+                              {/* Front Right Wall */}
+                              <polygon
+                                points={`0,${currentY + 30} 60,${currentY} 60,${currentY - floorHeight} 0,${currentY + 30 - floorHeight}`}
+                                fill={i % 2 === 0 ? "#4338ca" : "#3730a3"}
+                                stroke="#4f46e5"
+                                strokeWidth="0.8"
+                              />
+                              {/* Roof/Slab Plane */}
+                              <polygon
+                                points={`-60,${currentY - floorHeight} 0,${currentY + 30 - floorHeight} 60,${currentY - floorHeight} 0,${currentY - 30 - floorHeight}`}
+                                fill="#6366f1"
+                                stroke="#818cf8"
+                                strokeWidth="1"
+                                opacity="0.9"
+                              />
+
+                              {/* Windows Mockup Lines */}
+                              <line x1="-40" y1={currentY + 12 - floorHeight} x2="-40" y2={currentY + 18 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
+                              <line x1="-20" y1={currentY + 18 - floorHeight} x2="-20" y2={currentY + 24 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
+                              <line x1="20" y1={currentY + 18 - floorHeight} x2="20" y2={currentY + 24 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
+                              <line x1="40" y1={currentY + 12 - floorHeight} x2="40" y2={currentY + 18 - floorHeight} stroke="#818cf8" strokeWidth="1.5" opacity="0.6" />
+
+                              {/* Floor Tag text on the top floor only */}
+                              {i === calculatedFloors - 1 && (
+                                <g transform={`translate(0, ${currentY - floorHeight - 12})`}>
+                                  <rect x="-24" y="-8" width="48" height="13" fill="#0f172a" rx="3" stroke="#818cf8" strokeWidth="0.8" />
+                                  <text x="0" y="2" textAnchor="middle" fontSize="7" fontWeight="bold" className="fill-indigo-300 font-mono">
+                                    {calculatedFloors} PISOS
+                                  </text>
+                                </g>
+                              )}
+                            </g>
+                          );
+                        })
+                      )}
                     </g>
                   )}
                 </g>

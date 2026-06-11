@@ -4,17 +4,23 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { PORTUGAL_MUNICIPALITIES, ProjectParams, MunicipalityPreset } from "./types";
+import { PORTUGAL_MUNICIPALITIES } from "./data/municipalities";
+import { ProjectParams, MunicipalityPreset } from "./types";
 import { calculateFeasibility } from "./utils";
 import CadSandbox from "./components/CadSandbox";
 import ReportView from "./components/ReportView";
 import AiAdvisor from "./components/AiAdvisor";
 import GisIntegration from "./components/GisIntegration";
-import { Building2, Save, Trash2, Sparkles, TrendingUp, HelpCircle, MapPin, Layers, Coins, ClipboardList, Globe } from "lucide-react";
+import GeoAnalystBench from "./components/GeoAnalystBench";
+import GeoBenchX from "./components/GeoBenchX";
+import DgtModelExplorer from "./components/DgtModelExplorer";
+import { Building2, Save, Trash2, Sparkles, TrendingUp, HelpCircle, MapPin, Layers, Coins, ClipboardList, Globe, Cpu } from "lucide-react";
 
 export default function App() {
   // 1. Core Project Parameters States
   const [selectedMunicipalityId, setSelectedMunicipalityId] = useState<string>("lisboa");
+  const [muniSearchQuery, setMuniSearchQuery] = useState("");
+  const [isMuniDropdownOpen, setIsMuniDropdownOpen] = useState(false);
   const [plotArea, setPlotArea] = useState<number>(1500);
   const [landCost, setLandCost] = useState<number>(1800000);
   const [customCOS, setCustomCOS] = useState<number>(1.8);
@@ -27,15 +33,59 @@ export default function App() {
   const [efficiencyRatio, setEfficiencyRatio] = useState<number>(0.82);
   const [additionalCostsPct, setAdditionalCostsPct] = useState<number>(0.12);
   const [projectName, setProjectName] = useState<string>("Estudo de Viabilidade Alvalade");
+  const [projectType, setProjectType] = useState<"residential" | "agricultural">("residential");
 
   // Local storage studies storage
   const [savedStudies, setSavedStudies] = useState<ProjectParams[]>([]);
   const [compareMode, setCompareMode] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<"visual" | "report" | "ai" | "gis">("visual");
+  const [activeTab, setActiveTab] = useState<"visual" | "report" | "ai" | "gis" | "bench" | "bench_x" | "dgt">("visual");
   const [gisInjectedText, setGisInjectedText] = useState<string>("");
+
+  // Hook for closing custom municipality dropdown
+  useEffect(() => {
+    if (!isMuniDropdownOpen) return;
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest("#municipality-select-trigger") && !target.closest("#municipality-dropdown-popup")) {
+        setIsMuniDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isMuniDropdownOpen]);
+
+  const handleProjectTypeChange = (type: "residential" | "agricultural") => {
+    setProjectType(type);
+    if (type === "agricultural") {
+      setProjectName("Apoio Agrícola - Monte Alentejano");
+      setPlotArea(12500); // 1.25 Hectares
+      setLandCost(85000); // Cheap agricultural rústico land
+      setCustomCES(0.04); // 4% footprint cap
+      setCustomCOS(0.04);
+      setCustomPermeability(0.15);
+      setCustomMaxFloors(1);
+      setCustomBuildCost(550); // Low construction cost for wooden/metallic warehouse
+      setCustomSalesPrice(950); // Asset valuation multiplier per m2
+      setAvgUnitSize(150); // Average warehouse coverage
+    } else {
+      setProjectName("Estudo de Viabilidade Alvalade");
+      setPlotArea(1500);
+      setLandCost(1800000);
+      setCustomCES(0.60);
+      setCustomCOS(1.80);
+      setCustomPermeability(0.30);
+      setCustomMaxFloors(6);
+      setCustomBuildCost(1950);
+      setCustomSalesPrice(5500);
+      setAvgUnitSize(85);
+    }
+  };
 
   // Load preset elements automatically when municipality changes
   const applyPreset = (preset: MunicipalityPreset) => {
+    if (projectType === "agricultural") return; // Keep agricultural defaults safe
     setCustomCOS(preset.typicalCOS);
     setCustomCES(preset.typicalCES);
     setCustomPermeability(preset.typicalPermeability);
@@ -82,6 +132,7 @@ export default function App() {
     parkingCostPerUnit: 15000, // underground parking construction average unit cost
     financialRatePct: 8.0, // interest rate average
     dateCreated: new Date().toLocaleDateString("pt-PT"),
+    projectType,
   };
 
   const currentResults = calculateFeasibility(activeProject);
@@ -123,6 +174,7 @@ export default function App() {
     setAvgUnitSize(study.avgUnitSize);
     setEfficiencyRatio(study.efficiencyRatio);
     setAdditionalCostsPct(study.additionalCostsPct);
+    setProjectType(study.projectType || "residential");
   };
 
   return (
@@ -148,22 +200,106 @@ export default function App() {
 
         {/* Quick study preset bar */}
         <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800 relative">
             <span className="text-[11px] font-medium text-slate-400 pl-1.5 flex items-center gap-1">
               <MapPin className="h-3 w-3 text-emerald-400" /> Município:
             </span>
-            <select
-              id="municipality-select"
-              value={selectedMunicipalityId}
-              onChange={(e) => setSelectedMunicipalityId(e.target.value)}
-              className="bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-400 cursor-pointer"
-            >
-              {PORTUGAL_MUNICIPALITIES.map((mun) => (
-                <option key={mun.id} value={mun.id} className="bg-slate-950 text-slate-200">
-                  {mun.name} ({mun.district})
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <button
+                type="button"
+                id="municipality-select-trigger"
+                onClick={() => setIsMuniDropdownOpen(!isMuniDropdownOpen)}
+                className="bg-slate-900 border border-slate-700/80 hover:border-emerald-500 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-200 focus:outline-none focus:border-emerald-400 cursor-pointer flex items-center gap-1.5 min-w-[200px] justify-between transition-colors text-left"
+              >
+                <div>
+                  <span className="block font-bold">
+                    {PORTUGAL_MUNICIPALITIES.find((m) => m.id === selectedMunicipalityId)?.name || "Selecione..."}
+                  </span>
+                  <span className="text-[9px] text-slate-500 font-normal block -mt-0.5">
+                    {PORTUGAL_MUNICIPALITIES.find((m) => m.id === selectedMunicipalityId)?.district}
+                  </span>
+                </div>
+                <span className="text-[9px] text-slate-400 pl-2">▼</span>
+              </button>
+
+              {isMuniDropdownOpen && (
+                <div 
+                  id="municipality-dropdown-popup"
+                  className="absolute left-0 mt-2 w-[280px] max-h-[380px] bg-slate-950 border border-slate-800 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-2 overflow-hidden transition-all animate-in fade-in slide-in-from-top-1 duration-150"
+                >
+                  <div className="relative flex items-center bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+                    <input
+                      type="text"
+                      placeholder="Pesquisar concelho..."
+                      value={muniSearchQuery}
+                      onChange={(e) => setMuniSearchQuery(e.target.value)}
+                      className="bg-transparent text-xs text-slate-100 placeholder-slate-500 w-full focus:outline-none"
+                      autoFocus
+                    />
+                    {muniSearchQuery && (
+                      <button 
+                        type="button" 
+                        onClick={() => setMuniSearchQuery("")} 
+                        className="text-[10px] text-slate-400 hover:text-slate-100 px-1"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="overflow-y-auto max-h-[290px] pr-1 flex-1 space-y-2">
+                    {(() => {
+                      const filtered = PORTUGAL_MUNICIPALITIES.filter((m) => {
+                        const searchNorm = muniSearchQuery.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const nameNorm = m.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        const distNorm = m.district.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        return nameNorm.includes(searchNorm) || distNorm.includes(searchNorm);
+                      });
+
+                      if (filtered.length === 0) {
+                        return <div className="text-center py-4 text-xs text-slate-500 italic font-mono">Nenhum concelho encontrado</div>;
+                      }
+
+                      // Group matches by district
+                      const grouped: { [district: string]: MunicipalityPreset[] } = {};
+                      filtered.forEach((m) => {
+                        if (!grouped[m.district]) grouped[m.district] = [];
+                        grouped[m.district].push(m);
+                      });
+
+                      return Object.entries(grouped).map(([dist, muns]) => (
+                        <div key={dist} className="space-y-1">
+                          <div className="text-[9px] font-bold text-slate-500 tracking-wider uppercase px-2 py-0.5 bg-slate-900/40 rounded-md">
+                            {dist}
+                          </div>
+                          <div className="space-y-0.5">
+                            {muns.map((mun) => (
+                              <button
+                                key={mun.id}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedMunicipalityId(mun.id);
+                                  setIsMuniDropdownOpen(false);
+                                  setMuniSearchQuery("");
+                                }}
+                                className={`w-full text-left text-xs px-2.5 py-1.5 rounded-lg flex items-center justify-between transition-all cursor-pointer ${
+                                  selectedMunicipalityId === mun.id
+                                    ? "bg-emerald-600/20 border border-emerald-600/30 text-emerald-400 font-semibold"
+                                    : "hover:bg-slate-900/80 border border-transparent text-slate-300"
+                                }`}
+                              >
+                                <span>{mun.name}</span>
+                                {selectedMunicipalityId === mun.id && <span className="text-[10px] text-emerald-400">✓</span>}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ));
+                    })()}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="flex gap-2">
@@ -199,6 +335,34 @@ export default function App() {
               <h3 className="font-display font-semibold text-slate-200 text-sm tracking-wide uppercase">
                 Parâmetros do Terreno & PDM
               </h3>
+            </div>
+
+            {/* Tipo de Projeto Toggle Selector */}
+            <div className="bg-slate-950/65 p-1.5 rounded-2xl border border-slate-800 flex gap-1">
+              <button
+                type="button"
+                id="project-type-residential"
+                onClick={() => handleProjectTypeChange("residential")}
+                className={`flex-1 py-1.5 text-[11px] font-bold rounded-xl transition-all cursor-pointer text-center ${
+                  projectType === "residential"
+                    ? "bg-indigo-600 text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Residencial (Habitação)
+              </button>
+              <button
+                type="button"
+                id="project-type-agricultural"
+                onClick={() => handleProjectTypeChange("agricultural")}
+                className={`flex-1 py-1.5 text-[11px] font-bold rounded-xl transition-all cursor-pointer text-center ${
+                  projectType === "agricultural"
+                    ? "bg-emerald-600 text-white shadow-sm"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                Apoio Agrícola
+              </button>
             </div>
 
             {/* Area do Terreno & Custo */}
@@ -487,6 +651,51 @@ export default function App() {
                 <span>Geoportal & GIS</span>
               </button>
 
+              <button
+                id="tab-bench-btn"
+                onClick={() => {
+                  setActiveTab("bench");
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === "bench"
+                    ? "bg-indigo-600 text-white shadow-sm shadow-indigo-950/40"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Cpu className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+                <span>GeoAnalystBench (SIG)</span>
+              </button>
+
+              <button
+                id="tab-bench-x-btn"
+                onClick={() => {
+                  setActiveTab("bench_x");
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === "bench_x"
+                    ? "bg-emerald-600 text-white shadow-sm shadow-emerald-950/40"
+                    : "text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Cpu className="h-3.5 w-3.5 text-emerald-400 animate-pulse" />
+                <span>GeoBenchX (Satélite)</span>
+              </button>
+
+              <button
+                id="tab-dgt-btn"
+                onClick={() => {
+                  setActiveTab("dgt");
+                }}
+                className={`flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                  activeTab === "dgt"
+                    ? "bg-slate-200 text-slate-900 shadow-sm shadow-slate-950/40 font-bold"
+                    : "text-slate-400 hover:text-slate-100"
+                }`}
+              >
+                <Layers className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Modelo DGT PDM/REN</span>
+              </button>
+
             </div>
 
             <div className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
@@ -580,6 +789,7 @@ export default function App() {
                     maxFloors={customMaxFloors}
                     calculatedFloors={currentResults.calculatedFloors}
                     permeability={customPermeability}
+                    projectType={projectType}
                   />
                 </div>
 
@@ -600,6 +810,18 @@ export default function App() {
                 onInjectGisData={(gisText) => setGisInjectedText(gisText)}
                 activeTabToAi={() => setActiveTab("ai")}
               />
+            )}
+
+            {activeTab === "bench" && (
+              <GeoAnalystBench project={activeProject} />
+            )}
+
+            {activeTab === "bench_x" && (
+              <GeoBenchX project={activeProject} />
+            )}
+
+            {activeTab === "dgt" && (
+              <DgtModelExplorer onInjectDgtSpec={(specText) => setGisInjectedText(specText)} />
             )}
           </div>
 

@@ -16,105 +16,6 @@ export interface MunicipalityPreset {
   typicalMaxFloors: number;
 }
 
-export const PORTUGAL_MUNICIPALITIES: MunicipalityPreset[] = [
-  {
-    id: "lisboa",
-    name: "Lisboa (Parque das Nações / Alvalade)",
-    district: "Lisboa",
-    typicalCOS: 1.8,
-    typicalCES: 0.6,
-    typicalPermeability: 0.3,
-    avgBuildCost: 1950,
-    avgSalesPrice: 5500,
-    parkingRequirement: "1.5 lugares por fogo > T1, 1 lugar por fogo T0/T1",
-    typicalMaxFloors: 6,
-  },
-  {
-    id: "lisboa_historico",
-    name: "Lisboa (Centro Histórico / Alfama)",
-    district: "Lisboa",
-    typicalCOS: 2.2,
-    typicalCES: 0.85,
-    typicalPermeability: 0.15,
-    avgBuildCost: 2200,
-    avgSalesPrice: 6500,
-    parkingRequirement: "Isento ou pago em taxa de compensação municipal",
-    typicalMaxFloors: 4,
-  },
-  {
-    id: "porto",
-    name: "Porto (Foz do Douro / Boavista)",
-    district: "Porto",
-    typicalCOS: 1.4,
-    typicalCES: 0.5,
-    typicalPermeability: 0.35,
-    avgBuildCost: 1850,
-    avgSalesPrice: 4800,
-    parkingRequirement: "1 a 2 lugares por fogo dependendo da tipologia",
-    typicalMaxFloors: 5,
-  },
-  {
-    id: "porto_cedofeita",
-    name: "Porto (Centro / Cedofeita)",
-    district: "Porto",
-    typicalCOS: 1.8,
-    typicalCES: 0.7,
-    typicalPermeability: 0.2,
-    avgBuildCost: 1750,
-    avgSalesPrice: 3900,
-    parkingRequirement: "1 lugar por cada 120m2 de área bruta privada",
-    typicalMaxFloors: 4,
-  },
-  {
-    id: "braga",
-    name: "Braga (S. Víctor / Centro)",
-    district: "Braga",
-    typicalCOS: 1.2,
-    typicalCES: 0.45,
-    typicalPermeability: 0.4,
-    avgBuildCost: 1300,
-    avgSalesPrice: 2400,
-    parkingRequirement: "1 lugar por fogo (mínimo)",
-    typicalMaxFloors: 6,
-  },
-  {
-    id: "faro",
-    name: "Faro (Montenegro / Gambelas)",
-    district: "Faro",
-    typicalCOS: 0.9,
-    typicalCES: 0.4,
-    typicalPermeability: 0.45,
-    avgBuildCost: 1550,
-    avgSalesPrice: 3200,
-    parkingRequirement: "1 lugar por fogo + estacionamento público adicional",
-    typicalMaxFloors: 3,
-  },
-  {
-    id: "aveiro",
-    name: "Aveiro (Glória e Vera Cruz)",
-    district: "Aveiro",
-    typicalCOS: 1.3,
-    typicalCES: 0.5,
-    typicalPermeability: 0.35,
-    avgBuildCost: 1400,
-    avgSalesPrice: 2800,
-    parkingRequirement: "1.2 lugares de estacionamento privado por fogo",
-    typicalMaxFloors: 5,
-  },
-  {
-    id: "coimbra",
-    name: "Coimbra (Sé Nova / Celas)",
-    district: "Coimbra",
-    typicalCOS: 1.1,
-    typicalCES: 0.4,
-    typicalPermeability: 0.45,
-    avgBuildCost: 1350,
-    avgSalesPrice: 2300,
-    parkingRequirement: "1 lugar por fogo ou 1 por 150m2 de construção",
-    typicalMaxFloors: 4,
-  },
-];
-
 export interface ProjectParams {
   id: string;
   name: string;
@@ -133,6 +34,7 @@ export interface ProjectParams {
   parkingCostPerUnit: number; // construction of basement parkings € / place (typically 15000)
   financialRatePct: number; // financing / capital cost % (typically 8%)
   dateCreated: string;
+  projectType?: "residential" | "agricultural";
 }
 
 export interface FeasibilityResult {
